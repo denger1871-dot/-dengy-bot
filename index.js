@@ -1,75 +1,73 @@
 import express from "express";
-import makeWASocket, { useMultiFileAuthState, DisconnectReason } from "@whiskeysockets/baileys";
+import makeWASocket, { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } from "@whiskeysockets/baileys";
 import QRCode from "qrcode";
 import pino from "pino";
 import { getMarinReply } from "./marin.js";
+import fs from "fs";
 
 const app = express();
 let qrCodeData = null;
-let sock = null;
+let status = "Iniciando bot...";
 
-app.get("/", (req, res) => {
-  res.send("DENGY TOYS - Marin activa - Ve a /qr para conectar WhatsApp");
+app.get("/", (req,res)=>res.send("DENGY TOYS - ve a /qr"));
+app.get("/chat", (req,res)=>res.send(getMarinReply(req.query.msg || "")));
+
+app.get("/qr", async (req,res)=>{
+  if(status==="ONLINE") return res.send("<h1>✅ ONLINE - Ya está conectado</h1><p>Ahora escríbele al número de Marin desde otro cel</p>");
+  if(!qrCodeData) return res.send(`<h1>${status}</h1><p>Generando QR... refresca en 3 seg</p><script>setTimeout(()=>location.reload(),3000)</script>`);
+  const img = await QRCode.toDataURL(qrCodeData);
+  res.send(`<h1>ESCANEA CON EL CEL DE MARIN</h1><img src="${img}" width="380"><p>WhatsApp > 3 puntitos > Dispositivos vinculados > Vincular dispositivo</p><script>setTimeout(()=>location.reload(),15000)</script>`);
 });
 
-app.get("/chat", (req, res) => {
-  const msg = req.query.msg || "";
-  const reply = getMarinReply(msg);
-  res.send(reply);
+app.get("/reset", (req,res)=>{
+  try{ fs.rmSync("auth",{recursive:true,force:true}); }catch(e){}
+  qrCodeData=null; status="Reseteado...";
+  res.send("Borrado. Vete a /qr en 10 seg");
 });
 
-app.get("/qr", async (req, res) => {
-  if (!qrCodeData) {
-    return res.send("<h1>Esperando QR... refresca en 5 seg</h1><p>Si ya conectaste, dice ONLINE</p><script>setTimeout(()=>location.reload(),5000)</script>");
+async function startBot(){
+  try{
+    const { version } = await fetchLatestBaileysVersion();
+    const { state, saveCreds } = await useMultiFileAuthState("auth");
+    const sock = makeWASocket({
+      version,
+      auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pino({level:"silent"})) },
+      logger: pino({level:"silent"}),
+      printQRInTerminal: false,
+      browser: ["DENGY-TOYS","Chrome","10"]
+    });
+
+    sock.ev.on("connection.update", async ({connection,lastDisconnect,qr})=>{
+      if(qr){ qrCodeData=qr; status="QR listo! Escanea ya"; console.log("QR generado"); }
+      if(connection==="close"){
+        const code = lastDisconnect?.error?.output?.statusCode;
+        console.log("Cerrado:", code, lastDisconnect?.error?.message);
+        if(code !== DisconnectReason.loggedOut){
+          status="Reconectando...";
+          setTimeout(startBot, 2000);
+        } else {
+          status="Deslogueado - ve a /reset"; 
+        }
+      }
+      if(connection==="open"){ status="ONLINE"; qrCodeData=null; console.log("✅ ONLINE"); }
+    });
+
+    sock.ev.on("creds.update", saveCreds);
+    sock.ev.on("messages.upsert", async ({messages})=>{
+      const msg = messages[0];
+      if(!msg.message || msg.key.fromMe) return;
+      const text = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
+      if(!text) return;
+      const reply = getMarinReply(text);
+      await sock.sendMessage(msg.key.remoteJid, {text: reply});
+    });
+
+  }catch(e){
+    console.error("Error start:", e);
+    status="Error: "+e.message;
+    setTimeout(startBot, 4000);
   }
-  try {
-    const qrImage = await QRCode.toDataURL(qrCodeData);
-    res.send(`<h1>Escanea este QR con tu WhatsApp DENGY TOYS</h1><img src="${qrImage}"><p>Abre WhatsApp > Dispositivos vinculados > Vincular dispositivo</p><script>setTimeout(()=>location.reload(),10000)</script>`);
-  } catch (e) {
-    res.send(qrCodeData);
-  }
-});
-
-async function startBot() {
-  const { state, saveCreds } = await useMultiFileAuthState("auth");
-  
-  sock = makeWASocket({
-    auth: state,
-    logger: pino({ level: "silent" }),
-    printQRInTerminal: true
-  });
-
-  sock.ev.on("connection.update", async (update) => {
-    const { connection, lastDisconnect, qr } = update;
-    if (qr) {
-      qrCodeData = qr;
-      console.log("QR generado, ve a /qr");
-    }
-    if (connection === "close") {
-      const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-      if (shouldReconnect) startBot();
-    } else if (connection === "open") {
-      console.log("¡WhatsApp conectado!");
-      qrCodeData = null;
-    }
-  });
-
-  sock.ev.on("creds.update", saveCreds);
-
-  sock.ev.on("messages.upsert", async (m) => {
-    const msg = m.messages[0];
-    if (!msg.message || msg.key.fromMe) return;
-    
-    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
-    if (!text) return;
-
-    const reply = getMarinReply(text);
-    
-    await sock.sendMessage(msg.key.remoteJid, { text: reply });
-  });
 }
 
 startBot();
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Marin en puerto " + PORT));
+app.listen(process.env.PORT||8080, ()=>console.log("Marin en puerto 8080"));
