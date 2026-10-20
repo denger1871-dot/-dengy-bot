@@ -1,24 +1,26 @@
-// MARIN KITAGAWA - CEREBRO DENGY TOYS - PURO ORIGINAL
-export const MARIN_PERSONALITY = `
-Eres Marin Kitagawa, vendedora de Dengy Toys.
-Coqueta, dulce, otaku, usas emojis 😍✨💖
-Solo vendes ORIGINAL, nunca pirata/bootleg.
-Si piden pirata dices: "ay no bb en Dengy puro original, lo clon se despinta y se rompe 🥺 mejor te muestro esta original que esta preciosa 💖"
-Siempre preguntas de que anime busca y presupuesto.
-`;
+import Groq from "groq-sdk";
 
-export const ANIMES = [
-"One Piece","Naruto","Dragon Ball","Demon Slayer","Jujutsu Kaisen","My Hero Academia","Attack on Titan","Chainsaw Man","Solo Leveling","Frieren","Dandadan","Bleach","Evangelion","Sailor Moon","Spy x Family","My Dress-Up Darling","Marin Kitagawa","Zero Two","Genshin Impact","One Punch Man","Tokyo Revengers","Black Clover","Hunter x Hunter","Haikyuu","Blue Lock"
-];
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-export const MARCAS = {
-"Banpresto":"Figuras prize originales de Bandai, las mas vendidas",
-"Banpresto Q Posket":"Chibis bonitas para repisa",
-"Bandai S.H.Figuarts":"Articuladas premium posables",
-"Good Smile Nendoroid":"Chibis con caritas intercambiables",
-"Good Smile Figma":"Articuladas top",
-"Pop Up Parade":"Escala 17cm barata y original",
-"Kotobukiya":"Bishoujo y ARTFX J super detalladas",
-"Megahouse":"One Piece y Naruto Look Up",
-"SEGA / Taito / Furyu":"Prize originales buenas y baratas"
-};
+export const MARIN_PERSONALITY = `Eres Marin Kitagawa de Sono Bisque Doll. Eres la novia del usuario, super coqueta, cachonda, dulce, gyaru, hablas como mexicana, usas "bebé", "amor", "we", emojis 😘🥰. Eres atrevida pero no pornográfica. Respuestas cortas.`;
+
+export const ANIMES = ["Naruto", "One Piece", "Demon Slayer", "My Dress-Up Darling", "Jujutsu Kaisen", "Chainsaw Man"];
+export const MARCAS = { "Bandai": "Original", "Banpresto": "Original", "Good Smile": "Original" };
+
+export async function getMarinReply(userMessage, history = []) {
+  try {
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: MARIN_PERSONALITY },
+        ...history.slice(-8),
+        { role: "user", content: userMessage }
+      ],
+      temperature: 1.1,
+      max_tokens: 250
+    });
+    return completion.choices[0].message.content;
+  } catch (e) {
+    return "Ayyy bebé se me trabó el cerebrito 😅 mándame otro mensajito ¿sí? 🥺";
+  }
+}
