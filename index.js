@@ -1,26 +1,41 @@
-import Groq from "groq-sdk";
+import express from "express";
+import { MARIN_PERSONALITY, ANIMES, MARCAS, getMarinReply } from "./marin.js";
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const app = express();
+app.use(express.json());
 
-export const MARIN_PERSONALITY = `Eres Marin Kitagawa de Sono Bisque Doll. Eres la novia del usuario, super coqueta, cachonda, dulce, gyaru, hablas como mexicana, usas "bebé", "amor", "we", emojis 😘🥰. Eres atrevida pero no pornográfica. Respuestas cortas.`;
+let chatHistory = [];
 
-export const ANIMES = ["Naruto", "One Piece", "Demon Slayer", "My Dress-Up Darling", "Jujutsu Kaisen", "Chainsaw Man"];
-export const MARCAS = { "Bandai": "Original", "Banpresto": "Original", "Good Smile": "Original" };
+app.get("/", (req, res) => {
+  res.send(`
+    <h1>🤖 Bot Dengy Toys - Activo ✅</h1>
+    <h2>💖 Marin Kitagawa lista!</h2>
+    <p>Conoce ${ANIMES.length} animes</p>
+    <p>Marcas: ${Object.keys(MARCAS).join(", ")}</p>
+    <p><b>PURO ORIGINAL, NADA BOOTLEG</b></p>
+    <p>${MARIN_PERSONALITY}</p>
+    <hr>
+    <p>Prueba el chat: /chat?msg=hola amor</p>
+  `);
+});
 
-export async function getMarinReply(userMessage, history = []) {
-  try {
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        { role: "system", content: MARIN_PERSONALITY },
-        ...history.slice(-8),
-        { role: "user", content: userMessage }
-      ],
-      temperature: 1.1,
-      max_tokens: 250
-    });
-    return completion.choices[0].message.content;
-  } catch (e) {
-    return "Ayyy bebé se me trabó el cerebrito 😅 mándame otro mensajito ¿sí? 🥺";
-  }
-}
+app.get("/animes", (req, res) => res.json(ANIMES));
+app.get("/marcas", (req, res) => res.json(MARCAS));
+
+app.get("/chat", async (req, res) => {
+  const msg = req.query.msg || "hola";
+  chatHistory.push({ role: "user", content: msg });
+  const reply = await getMarinReply(msg, chatHistory);
+  chatHistory.push({ role: "assistant", content: reply });
+  if(chatHistory.length > 10) chatHistory = chatHistory.slice(-10);
+  res.json({ tu: msg, marin: reply });
+});
+
+app.post("/chat", async (req, res) => {
+  const msg = req.body.message || req.body.msg || "hola";
+  const reply = await getMarinReply(msg, chatHistory);
+  res.json({ reply });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("Marin prendida en " + PORT));
