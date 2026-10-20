@@ -1,25 +1,22 @@
-const express = require('express');
+import express from "express";
+import { MARIN_PERSONALITY, ANIMES, MARCAS } from "./marin.js";
+
 const app = express();
 app.use(express.json());
 
+app.get("/", (req, res) => {
+  res.send(`
+    <h1>🤖 Bot Dengy Toys - Activo ✅</h1>
+    <h2>💖 Marin Kitagawa lista!</h2>
+    <p>Conoce ${ANIMES.length} animes</p>
+    <p>Marcas: ${Object.keys(MARCAS).join(", ")}</p>
+    <p><b>PURO ORIGINAL, NADA BOOTLEG</b></p>
+    <p>${MARIN_PERSONALITY}</p>
+  `);
+});
+
+app.get("/animes", (req, res) => res.json(ANIMES));
+app.get("/marcas", (req, res) => res.json(MARCAS));
+
 const PORT = process.env.PORT || 3000;
-
-// Mensaje de bienvenida
-app.get('/', (req, res) => {
-  res.send('🤖 Bot Dengy Toys - Activo ✅');
-});
-
-// Webhook simple para pedidos de Dengy Toys
-app.post('/webhook', (req, res) => {
-  console.log('Pedido recibido:', req.body);
-  res.json({ status: 'ok', message: 'Pedido recibido en Dengy Toys' });
-});
-
-// Ruta de salud para Railway
-app.get('/health', (req, res) => {
-  res.json({ status: 'up', service: 'dengy-bot' });
-});
-
-app.listen(PORT, () => {
-  console.log(`Dengy Bot corriendo en puerto ${PORT}`);
-});
+app.listen(PORT, () => console.log("Marin prendida en " + PORT));
