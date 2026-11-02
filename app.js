@@ -9,9 +9,7 @@ async function startBot() {
         logger: P({ level: 'silent' }),
         printQRInTerminal: true
     })
-
     sock.ev.on('creds.update', saveCreds)
-
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect } = update
         if(connection === 'close') {
@@ -21,7 +19,6 @@ async function startBot() {
             console.log('¡Bot conectado!')
         }
     })
-
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const m = messages[0]
         if(!m.message || m.key.fromMe) return
@@ -31,5 +28,4 @@ async function startBot() {
         }
     })
 }
-
 startBot()
