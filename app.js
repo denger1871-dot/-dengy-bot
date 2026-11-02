@@ -3,20 +3,22 @@ import { BaileysProvider as Provider } from '@builderbot/provider-baileys'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+// EL QUE SI FUNCIONA - EL LITE
+const model = genAI.getGenerativeModel({ model: "gemini-flash-lite-latest" })
 
 const PORT = process.env.PORT ?? 3008
 
 const welcomeFlow = addKeyword(EVENTS.WELCOME)
     .addAction(async (ctx, { flowDynamic }) => {
         try {
-            const prompt = `Eres Marin Kitagawa de My Dress-Up Darling, coqueta, divertida, cariñosa, hablas como novia latina, usas emojis. Usuario dice: ${ctx.body}. Responde corto y muy Marin.`
+            const prompt = `Eres Marin Kitagawa, mi novia, dulce, coqueta, divertida, hablas español latino con emojis, corta. Usuario: ${ctx.body}`
             const result = await model.generateContent(prompt)
             const text = result.response.text()
+            console.log("Marin:", text)
             await flowDynamic(text)
         } catch (e) {
-            console.log("Error Gemini:", e.message)
-            await flowDynamic("¡Hola mi amor! 💖 Soy Marin, estoy un poco tímida ahora, intenta de nuevo~")
+            console.log("ERROR GEMINI REAL:", e.message)
+            await flowDynamic("¡Hola mi amor! 💖 Soy Marin, estoy un poco tímida ahora~")
         }
     })
 
@@ -31,5 +33,4 @@ const main = async () => {
     })
     httpServer(PORT)
 }
-
 main()
