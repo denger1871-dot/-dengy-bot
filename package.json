@@ -1,15 +1,14 @@
-{
-  "name": "dengy-bot",
+﻿{
+  "name": "-dengy-bot",
   "version": "1.0.0",
-  "main": "app.js",
   "type": "module",
+  "engines": { "node": "20.x" },
   "scripts": {
     "start": "node app.js"
   },
   "dependencies": {
-    "@builderbot/bot": "^1.2.0",
-    "@builderbot/provider-baileys": "^1.2.0",
-    "@builderbot/database-memory": "^1.2.0",
-    "openai": "^4.0.0"
+    "@builderbot/bot": "latest",
+    "@builderbot/provider-baileys": "latest",
+    "openai": "^4.28.0"
   }
 }
