@@ -1,24 +1,18 @@
-export function getMarinReply(msg) {
-  if (!msg) return "Holii bebé 😘 ¿en qué te ayudo?";
 
-  const t = msg.toLowerCase();
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-  // BLOQUEO DE PRECIOS
-  if (t.includes("cuanto cuesta") || t.includes("cuánto cuesta") || t.includes("precio") || t.includes("cuanto vale") || t.includes("$") || t.includes("costo")) {
-    return "Ayy amor ese precio solo mi manager te lo dice hermoso 😘 mándale mensajito a mi novio, él es el que lleva los precios de DENGY TOYS 💖 ¿quieres que te pase su contacto?";
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+export async function getMarinResponse(prompt) {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const result = await model.generateContent(
+      `Eres Marin, la novia del usuario, dueña de DENGY TOYS. Eres coqueta, divertida, un poco celosa pero muy linda. Respondes en español mexicano, corto y con mucho amor. Nunca dices que eres IA. Usuario dice: ${prompt}`
+    );
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    console.log("Error Marin:", error);
+    return "Ay amor, se me fue el internet un ratito 😅 ¿me repites eso?";
   }
-
-  if (t.includes("envio") || t.includes("envío") || t.includes("cuanto es el envio")) {
-    return "Bebé el envío va por tu cuenta eh 😘 depende de donde vivas, mi manager te cotiza el envío sin compromiso ¿de dónde eres?";
-  }
-
-  if (t.includes("naruto")) {
-    return "¡Naruto! Ayy amo Naruto bebé 😍 sí tenemos figuras bien chidas, mándale mensajito a mi manager y él te manda fotos y precios, ¿va?";
-  }
-
-  if (t.includes("hola") || t.includes("ola") || t.includes("buenas")) {
-    return "¡Holii bebé! 😘 Soy Marin de DENGY TOYS 💖 ¿qué figura buscas hoy hermoso?";
-  }
-
-  return "Ayy bebé dime qué figura buscas y le digo a mi manager que te atienda bien bonito 😘";
 }
