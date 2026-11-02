@@ -2,14 +2,12 @@
   "name": "dengy-bot",
   "version": "1.0.0",
   "main": "app.js",
-  "scripts": {
-    "start": "node app.js"
-  },
+  "type": "module",
+  "scripts": { "start": "node app.js" },
   "dependencies": {
-    "@whiskeysockets/baileys": "latest",
-    "@hapi/boom": "latest",
-    "pino": "latest",
-    "qrcode-terminal": "latest",
-    "express": "latest"
+    "@builderbot/bot": "latest",
+    "@builderbot/provider-baileys": "latest",
+    "@builderbot/database-memory": "latest",
+    "openai": "latest"
   }
 }
