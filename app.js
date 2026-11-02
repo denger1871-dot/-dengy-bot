@@ -1,3 +1,5 @@
+const express = require('express');
+const app2 = express(); app2.get('/', (req,res)=>res.send('Bot Marin Activo')); app2.listen(process.env.PORT || 3000, ()=>console.log('Web OK'));
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys')
 const { Boom } = require('@hapi/boom')
 const P = require('pino')
