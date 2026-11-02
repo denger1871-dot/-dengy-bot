@@ -1,4 +1,5 @@
-import makeWASocket, { useMultiFileAuthState, DisconnectReason } from "@whiskeysockets/baileys";
+import makeWASocket from "@whiskeysockets/baileys";
+import { useMultiFileAuthState, DisconnectReason } from "@whiskeysockets/baileys";
 import { getMarinResponse } from "./marin.js";
 import P from "pino";
 
