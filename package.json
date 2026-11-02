@@ -3,11 +3,13 @@
   "version": "1.0.0",
   "main": "app.js",
   "type": "module",
-  "scripts": { "start": "node app.js" },
+  "scripts": {
+    "start": "node app.js"
+  },
   "dependencies": {
-    "@builderbot/bot": "latest",
-    "@builderbot/provider-baileys": "latest",
-    "@builderbot/database-memory": "latest",
-    "openai": "latest"
+    "@builderbot/bot": "^1.2.0",
+    "@builderbot/provider-baileys": "^1.2.0",
+    "@builderbot/database-memory": "^1.2.0",
+    "openai": "^4.0.0"
   }
 }
