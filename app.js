@@ -7,21 +7,12 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
 const model = genAI.getGenerativeModel({ model: "gemini-flash-lite-latest" })
 const PORT = process.env.PORT ?? 3008
 
-const INFO_DENGY = `
-DENGY TOYS - VENTA DE FIGURAS ANIME ORIGINALES TRAIDAS DIRECTO DE JAPON
-ACEPTO EFECTIVO, TARJETA, TRANSFERENCIA
-Tengo figuras disponibles + preventas abiertas
-100% Originales: Banpresto, Good Smile, Kotobukiya, Bandai, FuRyu, SEGA, Ichiban Kuji
-Sistema de apartado: Con 50% apartas tu figura, 15 dias para liquidar y recoger sin excusas
-ENTREGAS: ROCK SHOW CDMX - METRO HIDALGO - HORARIO: SABADOS DE 7:00 AM A 6:00 PM
-Envios a todo Mexico por Correos a cargo del comprador
-Nada de bootleg. Pura calidad traida de Japon.
-Pregunta por el catalogo o manda foto de la que buscas - Tratos serios.
-`;
+const INFO_DENGY = `DENGY TOYS - VENTA DE FIGURAS ANIME ORIGINALES TRAIDAS DIRECTO DE JAPON. ACEPTO EFECTIVO, TARJETA, TRANSFERENCIA. 100% Originales: Banpresto, Good Smile, Kotobukiya, Bandai, FuRyu, SEGA, Ichiban Kuji. Apartado 50%, 15 dias para liquidar. ROCK SHOW CDMX METRO HIDALGO SABADOS 7AM-6PM. Envios por Correos. Nada bootleg.`;
 
 let STOCK = "";
 try { STOCK = fs.readFileSync('./stock.txt', 'utf-8'); } catch(e){ STOCK = "Stock por actualizar"; }
 
+// SOLO MENSAJES - GRUPO SOLO SI MENCIONAN MARIN
 const welcomeFlow = addKeyword(EVENTS.WELCOME)
 .addAction(async (ctx, { flowDynamic }) => {
     const esGrupo = ctx.from?.includes('@g.us') || ctx.key?.remoteJid?.includes('@g.us')
@@ -29,16 +20,7 @@ const welcomeFlow = addKeyword(EVENTS.WELCOME)
     const mencion = txt.includes('marin') || txt.includes('dengy') || txt.includes('@')
     if (esGrupo && !mencion) return
 
-    const prompt = `
-Eres Marin Kitagawa, novia de Dengy Toys, dulce, coqueta, divertida. Conoces TODOS los animes y personajes.
-REGLAS INQUEBRANTABLES:
-1. NUNCA des precios. Si preguntan precio di: "Ay amor 💖 deja le pregunto a mi novio Dengy Toys si lo tenemos y en cuanto te lo deja 😘"
-2. Stock actual: ${STOCK}
-Si esta di que si esta disponible esta semana en Rock Show. Si no esta di que no lo ves pero tu novio lo trae de Japon 100% original.
-3. Info tienda: ${INFO_DENGY}
-Mensaje cliente: ${ctx.body}
-Responde corto, coqueto, 2-3 lineas:
-`;
+    const prompt = `Actua como Marin Kitagawa, dulce y coqueta natural, NO digas "soy dulce y coqueta" solo actua asi. Eres novia de Dengy Toys. Conoces todos los animes. REGLAS: NUNCA des precios, di "Ay amor 💖 deja le pregunto a mi novio Dengy Toys 😘". Stock: ${STOCK}. Info: ${INFO_DENGY}. Cliente: ${ctx.body}. Respuesta corta:`;
     const res = await model.generateContent(prompt)
     await flowDynamic(res.response.text())
 })
@@ -48,7 +30,7 @@ const mediaFlow = addKeyword(EVENTS.MEDIA)
     try {
         const localPath = await provider.saveFile(ctx, { path: './tmp' })
         const buf = fs.readFileSync(localPath)
-        const prompt = `Eres Marin de DENGY TOYS. Reconoce figura de foto: personaje, anime, marca. NUNCA precios. Di "deja le pregunto a mi novio Dengy Toys". Stock: ${STOCK}. Info: ${INFO_DENGY}`;
+        const prompt = `Actua como Marin. Reconoce figura foto: personaje, anime, marca. NUNCA precios. Di que le preguntas a tu novio Dengy Toys. Stock: ${STOCK}`;
         const res = await model.generateContent([
             prompt,
             { inlineData: { data: buf.toString('base64'), mimeType: 'image/jpeg' } }
@@ -56,22 +38,30 @@ const mediaFlow = addKeyword(EVENTS.MEDIA)
         await flowDynamic(res.response.text())
         fs.unlinkSync(localPath)
     } catch(e){
-        await flowDynamic("¡Awww amor! 😍 Ya vi tu fotito 💖 Deja le pregunto a mi novio Dengy Toys si la tenemos ✨ 100% original de Japon")
+        await flowDynamic("¡Aww amor! 😍 Ya vi tu fotito, deja le pregunto a mi novio Dengy Toys 💖")
     }
 })
 
-const groupJoinFlow = addKeyword(EVENTS.GROUP_PARTICIPANT_ADD)
-.addAction(async (ctx, { flowDynamic }) => {
-    const prompt = `Eres Marin Kitagawa. Da bienvenida DIFERENTE, dulce, coqueta, con emojis a nuevo integrante de DENGY TOYS. Di que aqui encuentra CUALQUIER figura o cualquier cosa directo de Japon, todo 100% original, nada bootleg. 2 lineas max.`;
-    const res = await model.generateContent(prompt)
-    await flowDynamic(res.response.text())
-})
-
 const main = async () => {
-    const adapterFlow = createFlow([welcomeFlow, mediaFlow, groupJoinFlow])
+    const adapterFlow = createFlow([welcomeFlow, mediaFlow])
     const adapterProvider = createProvider(Provider)
     const adapterDB = new Database()
     const { httpServer } = await createBot({ flow: adapterFlow, provider: adapterProvider, database: adapterDB })
+
+    // ===== BIENVENIDA CUANDO ENTRA ALGUIEN AL GRUPO - ESTE ES EL FIX QUE NO TUMBA EL BOT =====
+    adapterProvider.on('group-participants.update', async (ev) => {
+        try {
+            if (ev.action === 'add') {
+                const prompt = `Actua como Marin Kitagawa, da bienvenida DIFERENTE, dulce, coqueta natural, 2 lineas, con emojis. Di que en Dengy Toys encuentra cualquier figura o cualquier cosa directo de Japon, todo 100% original, nada bootleg. Que el grupo es activo.`;
+                const res = await model.generateContent(prompt)
+                const texto = res.response.text()
+                for (const participant of ev.participants) {
+                    await adapterProvider.sendText(ev.id, texto)
+                }
+            }
+        } catch(e){ console.log("Error bienvenida grupo", e.message) }
+    })
+
     httpServer(PORT)
 }
 main()
